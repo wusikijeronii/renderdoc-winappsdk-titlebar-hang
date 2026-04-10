@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.21)
 
+include(cmake/project.cmake)
+
 project(decor_test LANGUAGES CXX)
+
+include(cmake/utils.cmake)
+include(cmake/windows_sdk_tools.cmake)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,45 +16,48 @@ set(WINDOWS_APP_SDK_FOUNDATION_VERSION "1.8.260222000" CACHE STRING
 set(WINDOWS_APP_SDK_INTERACTIVE_VERSION "1.8.260125001" CACHE STRING
     "Version of Microsoft.WindowsAppSDK.InteractiveExperiences to install from NuGet")
 
-set(WINDOWS_APP_SDK_PACKAGES_DIR "${CMAKE_BINARY_DIR}/packages")
-set(WINDOWS_APP_SDK_GENERATED_DIR "${CMAKE_BINARY_DIR}/include-gen")
-
-find_program(NUGET_EXE NAMES nuget nuget.exe
-    HINTS "${CMAKE_SOURCE_DIR}" "$ENV{NUGET_EXE}")
-if(NOT NUGET_EXE)
-    message(FATAL_ERROR "nuget.exe was not found. Put it in PATH or next to CMakeLists.txt.")
+string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\." windows_app_sdk_version_match
+    "${WINDOWS_APP_SDK_FOUNDATION_VERSION}")
+if(NOT windows_app_sdk_version_match)
+    message(FATAL_ERROR
+        "Failed to parse Windows App SDK version '${WINDOWS_APP_SDK_FOUNDATION_VERSION}'")
 endif()
+set(windows_app_sdk_version_major "${CMAKE_MATCH_1}")
+set(windows_app_sdk_version_minor "${CMAKE_MATCH_2}")
 
-find_program(CPPWINRT_EXE NAMES cppwinrt cppwinrt.exe)
-if(NOT CPPWINRT_EXE)
-    message(FATAL_ERROR "cppwinrt.exe was not found. Install C++/WinRT tooling or add it to PATH.")
-endif()
+set(WINDOWS_APP_SDK_ROOT_DIR "${CMAKE_BINARY_DIR}/windows-app-sdk")
+set(WINDOWS_APP_SDK_PACKAGES_DIR "${WINDOWS_APP_SDK_ROOT_DIR}/packages")
+set(WINDOWS_APP_SDK_GENERATED_DIR "${WINDOWS_APP_SDK_ROOT_DIR}/include-gen")
 
-file(MAKE_DIRECTORY "${WINDOWS_APP_SDK_PACKAGES_DIR}")
-
-function(install_nuget_package package_name package_version)
-    set(package_root "${WINDOWS_APP_SDK_PACKAGES_DIR}/${package_name}.${package_version}")
-    if(NOT EXISTS "${package_root}")
-        message(STATUS "Installing ${package_name} ${package_version} into ${WINDOWS_APP_SDK_PACKAGES_DIR}")
-        execute_process(
-            COMMAND "${NUGET_EXE}" install "${package_name}"
-                -Version "${package_version}"
-                -OutputDirectory "${WINDOWS_APP_SDK_PACKAGES_DIR}"
-                -DependencyVersion HighestPatch
-                -NonInteractive
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-            COMMAND_ERROR_IS_FATAL ANY
-        )
-    endif()
-endfunction()
-
-install_nuget_package("Microsoft.WindowsAppSDK.Foundation" "${WINDOWS_APP_SDK_FOUNDATION_VERSION}")
-install_nuget_package("Microsoft.WindowsAppSDK.InteractiveExperiences" "${WINDOWS_APP_SDK_INTERACTIVE_VERSION}")
+acbt_nuget_install_package(
+    PACKAGE_NAME "Microsoft.WindowsAppSDK.Foundation"
+    PACKAGE_VERSION "${WINDOWS_APP_SDK_FOUNDATION_VERSION}"
+    OUTPUT_DIRECTORY "${WINDOWS_APP_SDK_PACKAGES_DIR}")
+acbt_nuget_install_package(
+    PACKAGE_NAME "Microsoft.WindowsAppSDK.InteractiveExperiences"
+    PACKAGE_VERSION "${WINDOWS_APP_SDK_INTERACTIVE_VERSION}"
+    OUTPUT_DIRECTORY "${WINDOWS_APP_SDK_PACKAGES_DIR}")
 
 set(WINDOWS_APP_SDK_FOUNDATION_DIR
     "${WINDOWS_APP_SDK_PACKAGES_DIR}/Microsoft.WindowsAppSDK.Foundation.${WINDOWS_APP_SDK_FOUNDATION_VERSION}")
 set(WINDOWS_APP_SDK_INTERACTIVE_DIR
     "${WINDOWS_APP_SDK_PACKAGES_DIR}/Microsoft.WindowsAppSDK.InteractiveExperiences.${WINDOWS_APP_SDK_INTERACTIVE_VERSION}")
+
+# Support both NuGet extraction layouts:
+# 1) <PackageName>.<Version> (expected)
+# 2) <Version> (legacy cache copy layout)
+set(WINDOWS_APP_SDK_FOUNDATION_DIR_LEGACY
+    "${WINDOWS_APP_SDK_PACKAGES_DIR}/${WINDOWS_APP_SDK_FOUNDATION_VERSION}")
+set(WINDOWS_APP_SDK_INTERACTIVE_DIR_LEGACY
+    "${WINDOWS_APP_SDK_PACKAGES_DIR}/${WINDOWS_APP_SDK_INTERACTIVE_VERSION}")
+
+if(NOT EXISTS "${WINDOWS_APP_SDK_FOUNDATION_DIR}" AND EXISTS "${WINDOWS_APP_SDK_FOUNDATION_DIR_LEGACY}")
+    set(WINDOWS_APP_SDK_FOUNDATION_DIR "${WINDOWS_APP_SDK_FOUNDATION_DIR_LEGACY}")
+endif()
+
+if(NOT EXISTS "${WINDOWS_APP_SDK_INTERACTIVE_DIR}" AND EXISTS "${WINDOWS_APP_SDK_INTERACTIVE_DIR_LEGACY}")
+    set(WINDOWS_APP_SDK_INTERACTIVE_DIR "${WINDOWS_APP_SDK_INTERACTIVE_DIR_LEGACY}")
+endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ARM64|arm64|aarch64)$")
@@ -98,28 +106,13 @@ foreach(required_path IN ITEMS
     endif()
 endforeach()
 
-set(WINDOWS_APP_SDK_GENERATED_STAMP "${WINDOWS_APP_SDK_GENERATED_DIR}/.stamp")
-add_custom_command(
-    OUTPUT "${WINDOWS_APP_SDK_GENERATED_STAMP}"
-    COMMAND "${CMAKE_COMMAND}" -E rm -rf "${WINDOWS_APP_SDK_GENERATED_DIR}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${WINDOWS_APP_SDK_GENERATED_DIR}"
-    COMMAND "${CPPWINRT_EXE}"
-        -out "${WINDOWS_APP_SDK_GENERATED_DIR}"
-        -ref sdk
-        -ref "${WINDOWS_APP_SDK_GRAPHICS_WINMD}"
-        -ref "${WINDOWS_APP_SDK_FOUNDATION_WINMD}"
-        -in "${WINDOWS_APP_SDK_UI_WINMD}"
-    COMMAND "${CMAKE_COMMAND}" -E touch "${WINDOWS_APP_SDK_GENERATED_STAMP}"
-    DEPENDS
+acbt_add_cppwinrt_target(
+    TARGET_NAME generate_windows_app_sdk_headers
+    OUTPUT_DIR "${WINDOWS_APP_SDK_GENERATED_DIR}"
+    INPUT_WINMD "${WINDOWS_APP_SDK_UI_WINMD}"
+    REF_WINMDS
         "${WINDOWS_APP_SDK_GRAPHICS_WINMD}"
-        "${WINDOWS_APP_SDK_FOUNDATION_WINMD}"
-        "${WINDOWS_APP_SDK_UI_WINMD}"
-    COMMENT "Generating C++/WinRT headers for Windows App SDK"
-    VERBATIM
-)
-
-add_custom_target(generate_windows_app_sdk_headers
-    DEPENDS "${WINDOWS_APP_SDK_GENERATED_STAMP}")
+        "${WINDOWS_APP_SDK_FOUNDATION_WINMD}")
 
 add_executable(decor_test main.cpp)
 add_dependencies(decor_test generate_windows_app_sdk_headers)
@@ -141,6 +134,10 @@ target_link_libraries(decor_test PRIVATE
     user32
     Microsoft.WindowsAppRuntime
     Microsoft.WindowsAppRuntime.Bootstrap)
+
+target_compile_definitions(decor_test PRIVATE
+    WINDOWS_APP_SDK_VERSION_MAJOR=${windows_app_sdk_version_major}
+    WINDOWS_APP_SDK_VERSION_MINOR=${windows_app_sdk_version_minor})
 
 set(WINDOWS_APP_SDK_BOOTSTRAP_DLL_OUTPUT
     "${CMAKE_CURRENT_BINARY_DIR}/Microsoft.WindowsAppRuntime.Bootstrap.dll")

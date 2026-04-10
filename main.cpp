@@ -16,6 +16,9 @@ using namespace winrt::Microsoft::UI::Windowing;
 using namespace winrt::Windows::Graphics;
 
 static constexpr int kLogicalTitleBarHeight = 40;
+static constexpr UINT32 kWindowsAppSdkReleaseMajorMinor =
+    (static_cast<UINT32>(WINDOWS_APP_SDK_VERSION_MAJOR) << 16) |
+    static_cast<UINT32>(WINDOWS_APP_SDK_VERSION_MINOR);
 
 struct AppState
 {
@@ -167,7 +170,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 
 int main()
 {
-    HRESULT hr = MddBootstrapInitialize(0x00010008, L"", {0});
+    HRESULT hr = MddBootstrapInitialize(kWindowsAppSdkReleaseMajorMinor, L"", {0});
     if (FAILED(hr))
     {
         printf("SDK is not installed\n");
