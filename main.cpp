@@ -17,8 +17,7 @@ using namespace winrt::Windows::Graphics;
 
 static constexpr int kLogicalTitleBarHeight = 40;
 static constexpr UINT32 kWindowsAppSdkReleaseMajorMinor =
-    (static_cast<UINT32>(WINDOWS_APP_SDK_VERSION_MAJOR) << 16) |
-    static_cast<UINT32>(WINDOWS_APP_SDK_VERSION_MINOR);
+    (static_cast<UINT32>(WINDOWS_APP_SDK_VERSION_MAJOR) << 16) | static_cast<UINT32>(WINDOWS_APP_SDK_VERSION_MINOR);
 
 struct AppState
 {
@@ -168,14 +167,31 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
     return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
+static void PrintHResultMessage(HRESULT hr)
+{
+    wchar_t *buffer = nullptr;
+    DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+
+    DWORD size =
+        FormatMessageW(flags, nullptr, static_cast<DWORD>(hr), 0, reinterpret_cast<LPWSTR>(&buffer), 0, nullptr);
+
+    if (size && buffer)
+    {
+        wprintf(L"HRESULT message: %ls\n", buffer);
+        LocalFree(buffer);
+    }
+}
+
 int main()
 {
     HRESULT hr = MddBootstrapInitialize(kWindowsAppSdkReleaseMajorMinor, L"", {0});
     if (FAILED(hr))
     {
-        printf("SDK is not installed\n");
+        printf("MddBootstrapInitialize failed: 0x%08lx\n", static_cast<unsigned long>(hr));
+        PrintHResultMessage(hr);
         return 1;
     }
+
     init_apartment(apartment_type::single_threaded);
 
     const wchar_t kClassName[] = L"WinRTWindowTitleBar";
