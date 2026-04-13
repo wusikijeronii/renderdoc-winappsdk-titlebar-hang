@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity
+      name="@PROJECT_NAME@"
+      version="1.0.0.0"
+      processorArchitecture="*"
+      type="win32" />
+
+  <file name="CoreMessagingXP.dll">
+    <activatableClass name="Microsoft.UI.Dispatching.DispatcherExitDeferral"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+    <activatableClass name="Microsoft.UI.Dispatching.DispatcherQueue"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+    <activatableClass name="Microsoft.UI.Dispatching.DispatcherQueueController"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+  </file>
+
+  <file name="Microsoft.UI.dll">
+    <activatableClass name="Microsoft.UI.Colors"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+    <activatableClass name="Microsoft.UI.ColorHelper"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+    <activatableClass name="Microsoft.UI.System.ThemeSettings"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+  </file>
+
+  <file name="Microsoft.UI.Windowing.dll">
+    <activatableClass name="Microsoft.UI.Windowing.AppWindow"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+    <activatableClass name="Microsoft.UI.Windowing.AppWindowPlacementDetails"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+    <activatableClass name="Microsoft.UI.Windowing.AppWindowPresenter"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+    <activatableClass name="Microsoft.UI.Windowing.CompactOverlayPresenter"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+    <activatableClass name="Microsoft.UI.Windowing.DisplayArea"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+    <activatableClass name="Microsoft.UI.Windowing.FullScreenPresenter"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+    <activatableClass name="Microsoft.UI.Windowing.OverlappedPresenter"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+  </file>
+
+  <file name="Microsoft.UI.Windowing.Core.dll">
+    <activatableClass name="Microsoft.UI.Windowing.AppWindowTitleBar"
+                      threadingModel="both"
+                      xmlns="urn:schemas-microsoft-com:winrt.v1" />
+  </file>
+</assembly>

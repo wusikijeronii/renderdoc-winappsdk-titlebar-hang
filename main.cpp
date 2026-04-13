@@ -1,6 +1,7 @@
 #include <windows.h>
 //
 #include <windowsx.h>
+#include <winerror.h>
 #include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.h>
 #include <winrt/Windows.Foundation.Collections.h>
@@ -28,6 +29,7 @@ struct AppState
 };
 
 static AppState g_state{};
+STDAPI WindowsAppRuntime_EnsureIsLoaded();
 
 static int GetDpiForHwndSafe(HWND hwnd)
 {
@@ -87,7 +89,9 @@ static bool InitAppWindowTitleBar(HWND hwnd)
             return false;
         }
 
+        printf("Calling GetWindowIdFromWindow\n");
         auto id = winrt::Microsoft::UI::GetWindowIdFromWindow(hwnd);
+        printf("Calling AppWindow::GetFromWindowId\n");
         g_state.appWindow = AppWindow::GetFromWindowId(id);
         if (!g_state.appWindow)
         {
@@ -95,6 +99,7 @@ static bool InitAppWindowTitleBar(HWND hwnd)
             return false;
         }
 
+        printf("Calling AppWindow::TitleBar\n");
         g_state.titleBar = g_state.appWindow.TitleBar();
         if (!g_state.titleBar)
         {
@@ -196,9 +201,30 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
     return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
+static void PrintHResultMessage(HRESULT hr)
+{
+    wchar_t *buffer = nullptr;
+    DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+    DWORD size =
+        FormatMessageW(flags, nullptr, static_cast<DWORD>(hr), 0, reinterpret_cast<LPWSTR>(&buffer), 0, nullptr);
+    if (size && buffer)
+    {
+        wprintf(L"HRESULT message: %ls\n", buffer);
+        LocalFree(buffer);
+    }
+}
+
 int main()
 {
     init_apartment(apartment_type::single_threaded);
+
+    const HRESULT ensureHr = WindowsAppRuntime_EnsureIsLoaded();
+    if (FAILED(ensureHr))
+    {
+        printf("WindowsAppRuntime_EnsureIsLoaded failed: 0x%08lx\n", static_cast<unsigned long>(ensureHr));
+        PrintHResultMessage(ensureHr);
+        return 1;
+    }
 
     const wchar_t kClassName[] = L"WinRTWindowTitleBar";
 

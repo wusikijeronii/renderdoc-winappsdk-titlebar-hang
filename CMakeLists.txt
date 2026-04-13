@@ -138,6 +138,13 @@ set(WINDOWS_APP_SDK_VERSIONINFO_XML
     "${WINDOWS_APP_SDK_RUNTIME_DIR}/WindowsAppSDK-VersionInfo.xml")
 set(WINDOWS_APP_SDK_VERSIONINFO_JSON
     "${WINDOWS_APP_SDK_RUNTIME_DIR}/WindowsAppSDK-VersionInfo.json")
+set(WINDOWS_APP_SDK_SELF_CONTAINED_MANIFEST
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.exe.manifest")
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/windowsappsdk-selfcontained.manifest.in"
+    "${WINDOWS_APP_SDK_SELF_CONTAINED_MANIFEST}"
+    @ONLY)
 
 foreach(required_path IN ITEMS
     "${WINDOWS_APP_SDK_FOUNDATION_DIR}/include/WindowsAppRuntimeAutoInitializer.cpp"
@@ -190,8 +197,7 @@ target_link_libraries(decor_test PRIVATE
     Microsoft.WindowsAppRuntime)
 
 target_compile_definitions(decor_test PRIVATE
-    MICROSOFT_WINDOWSAPPSDK_AUTOINITIALIZE_UNDOCKEDREGFREEWINRT
-    MICROSOFT_WINDOWSAPPSDK_UNDOCKEDREGFREEWINRT_AUTO_INITIALIZE_LOADLIBRARY)
+    MICROSOFT_WINDOWSAPPSDK_AUTOINITIALIZE_UNDOCKEDREGFREEWINRT)
 
 add_custom_command(
     TARGET decor_test POST_BUILD
@@ -213,6 +219,9 @@ add_custom_command(
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
             "${WINDOWS_APP_SDK_VERSIONINFO_JSON}"
             "$<TARGET_FILE_DIR:decor_test>/WindowsAppSDK-VersionInfo.json"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${WINDOWS_APP_SDK_SELF_CONTAINED_MANIFEST}"
+            "$<TARGET_FILE_DIR:decor_test>/$<TARGET_FILE_NAME:decor_test>.manifest"
     COMMENT "Copying Windows App SDK self-contained runtime files next to the executable"
     VERBATIM
 )
@@ -224,6 +233,7 @@ install(DIRECTORY "${WINDOWS_APP_SDK_WINUI_RUNTIME_DIR}/" DESTINATION .)
 install(DIRECTORY "${WINDOWS_APP_SDK_DWRITE_RUNTIME_DIR}/" DESTINATION .)
 install(FILES "${WINDOWS_APP_SDK_VERSIONINFO_XML}" DESTINATION .)
 install(FILES "${WINDOWS_APP_SDK_VERSIONINFO_JSON}" DESTINATION .)
+install(FILES "${WINDOWS_APP_SDK_SELF_CONTAINED_MANIFEST}" DESTINATION . RENAME "${PROJECT_NAME}.exe.manifest")
 
 # Ensure MSBuild/Visual Studio builds generated under the build directory
 # pick up self-contained Windows App SDK settings.
