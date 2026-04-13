@@ -15,15 +15,12 @@ set(WINDOWS_APP_SDK_FOUNDATION_VERSION "1.8.260222000" CACHE STRING
     "Version of Microsoft.WindowsAppSDK.Foundation to install from NuGet")
 set(WINDOWS_APP_SDK_INTERACTIVE_VERSION "1.8.260125001" CACHE STRING
     "Version of Microsoft.WindowsAppSDK.InteractiveExperiences to install from NuGet")
-
-string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\." windows_app_sdk_version_match
-    "${WINDOWS_APP_SDK_FOUNDATION_VERSION}")
-if(NOT windows_app_sdk_version_match)
-    message(FATAL_ERROR
-        "Failed to parse Windows App SDK version '${WINDOWS_APP_SDK_FOUNDATION_VERSION}'")
-endif()
-set(windows_app_sdk_version_major "${CMAKE_MATCH_1}")
-set(windows_app_sdk_version_minor "${CMAKE_MATCH_2}")
+set(WINDOWS_APP_SDK_WINUI_VERSION "1.8.260224000" CACHE STRING
+    "Version of Microsoft.WindowsAppSDK.WinUI to install from NuGet")
+set(WINDOWS_APP_SDK_DWRITE_VERSION "1.8.25122902" CACHE STRING
+    "Version of Microsoft.WindowsAppSDK.DWrite to install from NuGet")
+set(WINDOWS_APP_SDK_RUNTIME_VERSION "1.8.260317003" CACHE STRING
+    "Version of Microsoft.WindowsAppSDK.Runtime to install from NuGet")
 
 set(WINDOWS_APP_SDK_ROOT_DIR "${CMAKE_BINARY_DIR}/windows-app-sdk")
 set(WINDOWS_APP_SDK_PACKAGES_DIR "${WINDOWS_APP_SDK_ROOT_DIR}/packages")
@@ -37,11 +34,29 @@ acbt_nuget_install_package(
     PACKAGE_NAME "Microsoft.WindowsAppSDK.InteractiveExperiences"
     PACKAGE_VERSION "${WINDOWS_APP_SDK_INTERACTIVE_VERSION}"
     OUTPUT_DIRECTORY "${WINDOWS_APP_SDK_PACKAGES_DIR}")
+acbt_nuget_install_package(
+    PACKAGE_NAME "Microsoft.WindowsAppSDK.WinUI"
+    PACKAGE_VERSION "${WINDOWS_APP_SDK_WINUI_VERSION}"
+    OUTPUT_DIRECTORY "${WINDOWS_APP_SDK_PACKAGES_DIR}")
+acbt_nuget_install_package(
+    PACKAGE_NAME "Microsoft.WindowsAppSDK.DWrite"
+    PACKAGE_VERSION "${WINDOWS_APP_SDK_DWRITE_VERSION}"
+    OUTPUT_DIRECTORY "${WINDOWS_APP_SDK_PACKAGES_DIR}")
+acbt_nuget_install_package(
+    PACKAGE_NAME "Microsoft.WindowsAppSDK.Runtime"
+    PACKAGE_VERSION "${WINDOWS_APP_SDK_RUNTIME_VERSION}"
+    OUTPUT_DIRECTORY "${WINDOWS_APP_SDK_PACKAGES_DIR}")
 
 set(WINDOWS_APP_SDK_FOUNDATION_DIR
     "${WINDOWS_APP_SDK_PACKAGES_DIR}/Microsoft.WindowsAppSDK.Foundation.${WINDOWS_APP_SDK_FOUNDATION_VERSION}")
 set(WINDOWS_APP_SDK_INTERACTIVE_DIR
     "${WINDOWS_APP_SDK_PACKAGES_DIR}/Microsoft.WindowsAppSDK.InteractiveExperiences.${WINDOWS_APP_SDK_INTERACTIVE_VERSION}")
+set(WINDOWS_APP_SDK_WINUI_DIR
+    "${WINDOWS_APP_SDK_PACKAGES_DIR}/Microsoft.WindowsAppSDK.WinUI.${WINDOWS_APP_SDK_WINUI_VERSION}")
+set(WINDOWS_APP_SDK_DWRITE_DIR
+    "${WINDOWS_APP_SDK_PACKAGES_DIR}/Microsoft.WindowsAppSDK.DWrite.${WINDOWS_APP_SDK_DWRITE_VERSION}")
+set(WINDOWS_APP_SDK_RUNTIME_DIR
+    "${WINDOWS_APP_SDK_PACKAGES_DIR}/Microsoft.WindowsAppSDK.Runtime.${WINDOWS_APP_SDK_RUNTIME_VERSION}")
 
 # Support both NuGet extraction layouts:
 # 1) <PackageName>.<Version> (expected)
@@ -50,6 +65,12 @@ set(WINDOWS_APP_SDK_FOUNDATION_DIR_LEGACY
     "${WINDOWS_APP_SDK_PACKAGES_DIR}/${WINDOWS_APP_SDK_FOUNDATION_VERSION}")
 set(WINDOWS_APP_SDK_INTERACTIVE_DIR_LEGACY
     "${WINDOWS_APP_SDK_PACKAGES_DIR}/${WINDOWS_APP_SDK_INTERACTIVE_VERSION}")
+set(WINDOWS_APP_SDK_WINUI_DIR_LEGACY
+    "${WINDOWS_APP_SDK_PACKAGES_DIR}/${WINDOWS_APP_SDK_WINUI_VERSION}")
+set(WINDOWS_APP_SDK_DWRITE_DIR_LEGACY
+    "${WINDOWS_APP_SDK_PACKAGES_DIR}/${WINDOWS_APP_SDK_DWRITE_VERSION}")
+set(WINDOWS_APP_SDK_RUNTIME_DIR_LEGACY
+    "${WINDOWS_APP_SDK_PACKAGES_DIR}/${WINDOWS_APP_SDK_RUNTIME_VERSION}")
 
 if(NOT EXISTS "${WINDOWS_APP_SDK_FOUNDATION_DIR}" AND EXISTS "${WINDOWS_APP_SDK_FOUNDATION_DIR_LEGACY}")
     set(WINDOWS_APP_SDK_FOUNDATION_DIR "${WINDOWS_APP_SDK_FOUNDATION_DIR_LEGACY}")
@@ -57,6 +78,18 @@ endif()
 
 if(NOT EXISTS "${WINDOWS_APP_SDK_INTERACTIVE_DIR}" AND EXISTS "${WINDOWS_APP_SDK_INTERACTIVE_DIR_LEGACY}")
     set(WINDOWS_APP_SDK_INTERACTIVE_DIR "${WINDOWS_APP_SDK_INTERACTIVE_DIR_LEGACY}")
+endif()
+
+if(NOT EXISTS "${WINDOWS_APP_SDK_WINUI_DIR}" AND EXISTS "${WINDOWS_APP_SDK_WINUI_DIR_LEGACY}")
+    set(WINDOWS_APP_SDK_WINUI_DIR "${WINDOWS_APP_SDK_WINUI_DIR_LEGACY}")
+endif()
+
+if(NOT EXISTS "${WINDOWS_APP_SDK_DWRITE_DIR}" AND EXISTS "${WINDOWS_APP_SDK_DWRITE_DIR_LEGACY}")
+    set(WINDOWS_APP_SDK_DWRITE_DIR "${WINDOWS_APP_SDK_DWRITE_DIR_LEGACY}")
+endif()
+
+if(NOT EXISTS "${WINDOWS_APP_SDK_RUNTIME_DIR}" AND EXISTS "${WINDOWS_APP_SDK_RUNTIME_DIR_LEGACY}")
+    set(WINDOWS_APP_SDK_RUNTIME_DIR "${WINDOWS_APP_SDK_RUNTIME_DIR_LEGACY}")
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -70,6 +103,8 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 else()
     set(WINDOWS_APP_SDK_ARCH "x86")
 endif()
+
+set(WINDOWS_APP_SDK_RUNTIME_MONIKER "win-${WINDOWS_APP_SDK_ARCH}")
 
 file(GLOB WINDOWS_APP_SDK_METADATA_CANDIDATES
     LIST_DIRECTORIES true
@@ -90,17 +125,34 @@ set(WINDOWS_APP_SDK_GRAPHICS_WINMD
     "${WINDOWS_APP_SDK_METADATA_BASE}/Microsoft.Graphics.winmd")
 set(WINDOWS_APP_SDK_UI_WINMD
     "${WINDOWS_APP_SDK_METADATA_BASE}/Microsoft.UI.winmd")
-set(WINDOWS_APP_SDK_BOOTSTRAP_DLL
-    "${WINDOWS_APP_SDK_FOUNDATION_DIR}/runtimes/win-${WINDOWS_APP_SDK_ARCH}/native/Microsoft.WindowsAppRuntime.Bootstrap.dll")
+
+set(WINDOWS_APP_SDK_FOUNDATION_RUNTIME_DIR
+    "${WINDOWS_APP_SDK_FOUNDATION_DIR}/runtimes-framework/${WINDOWS_APP_SDK_RUNTIME_MONIKER}/native")
+set(WINDOWS_APP_SDK_INTERACTIVE_RUNTIME_DIR
+    "${WINDOWS_APP_SDK_INTERACTIVE_DIR}/runtimes-framework/${WINDOWS_APP_SDK_RUNTIME_MONIKER}/native")
+set(WINDOWS_APP_SDK_WINUI_RUNTIME_DIR
+    "${WINDOWS_APP_SDK_WINUI_DIR}/runtimes-framework/${WINDOWS_APP_SDK_RUNTIME_MONIKER}/native")
+set(WINDOWS_APP_SDK_DWRITE_RUNTIME_DIR
+    "${WINDOWS_APP_SDK_DWRITE_DIR}/runtimes-framework/${WINDOWS_APP_SDK_RUNTIME_MONIKER}/native")
+set(WINDOWS_APP_SDK_VERSIONINFO_XML
+    "${WINDOWS_APP_SDK_RUNTIME_DIR}/WindowsAppSDK-VersionInfo.xml")
+set(WINDOWS_APP_SDK_VERSIONINFO_JSON
+    "${WINDOWS_APP_SDK_RUNTIME_DIR}/WindowsAppSDK-VersionInfo.json")
 
 foreach(required_path IN ITEMS
-    "${WINDOWS_APP_SDK_FOUNDATION_DIR}/include/MddBootstrap.h"
+    "${WINDOWS_APP_SDK_FOUNDATION_DIR}/include/WindowsAppRuntimeAutoInitializer.cpp"
+    "${WINDOWS_APP_SDK_FOUNDATION_DIR}/include/UndockedRegFreeWinRT-AutoInitializer.cpp"
     "${WINDOWS_APP_SDK_INTERACTIVE_DIR}/include/Microsoft.UI.Interop.h"
     "${WINDOWS_APP_SDK_FOUNDATION_DIR}/lib/native/${WINDOWS_APP_SDK_ARCH}/Microsoft.WindowsAppRuntime.lib"
-    "${WINDOWS_APP_SDK_FOUNDATION_DIR}/lib/native/${WINDOWS_APP_SDK_ARCH}/Microsoft.WindowsAppRuntime.Bootstrap.lib"
     "${WINDOWS_APP_SDK_FOUNDATION_WINMD}"
     "${WINDOWS_APP_SDK_GRAPHICS_WINMD}"
-    "${WINDOWS_APP_SDK_UI_WINMD}")
+    "${WINDOWS_APP_SDK_UI_WINMD}"
+    "${WINDOWS_APP_SDK_FOUNDATION_RUNTIME_DIR}"
+    "${WINDOWS_APP_SDK_INTERACTIVE_RUNTIME_DIR}"
+    "${WINDOWS_APP_SDK_WINUI_RUNTIME_DIR}"
+    "${WINDOWS_APP_SDK_DWRITE_RUNTIME_DIR}"
+    "${WINDOWS_APP_SDK_VERSIONINFO_XML}"
+    "${WINDOWS_APP_SDK_VERSIONINFO_JSON}")
     if(NOT EXISTS "${required_path}")
         message(FATAL_ERROR "Required Windows App SDK file was not found: ${required_path}")
     endif()
@@ -114,7 +166,10 @@ acbt_add_cppwinrt_target(
         "${WINDOWS_APP_SDK_GRAPHICS_WINMD}"
         "${WINDOWS_APP_SDK_FOUNDATION_WINMD}")
 
-add_executable(decor_test main.cpp)
+add_executable(decor_test
+    main.cpp
+    "${WINDOWS_APP_SDK_FOUNDATION_DIR}/include/WindowsAppRuntimeAutoInitializer.cpp"
+    "${WINDOWS_APP_SDK_FOUNDATION_DIR}/include/UndockedRegFreeWinRT-AutoInitializer.cpp")
 add_dependencies(decor_test generate_windows_app_sdk_headers)
 
 target_include_directories(decor_test PRIVATE
@@ -132,27 +187,46 @@ target_link_libraries(decor_test PRIVATE
     oleaut32
     runtimeobject
     user32
-    Microsoft.WindowsAppRuntime
-    Microsoft.WindowsAppRuntime.Bootstrap)
+    Microsoft.WindowsAppRuntime)
 
 target_compile_definitions(decor_test PRIVATE
-    WINDOWS_APP_SDK_VERSION_MAJOR=${windows_app_sdk_version_major}
-    WINDOWS_APP_SDK_VERSION_MINOR=${windows_app_sdk_version_minor})
-
-set(WINDOWS_APP_SDK_BOOTSTRAP_DLL_OUTPUT
-    "${CMAKE_CURRENT_BINARY_DIR}/Microsoft.WindowsAppRuntime.Bootstrap.dll")
+    MICROSOFT_WINDOWSAPPSDK_AUTOINITIALIZE_UNDOCKEDREGFREEWINRT)
 
 add_custom_command(
     TARGET decor_test POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+            "${WINDOWS_APP_SDK_FOUNDATION_RUNTIME_DIR}"
+            "$<TARGET_FILE_DIR:decor_test>"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+            "${WINDOWS_APP_SDK_INTERACTIVE_RUNTIME_DIR}"
+            "$<TARGET_FILE_DIR:decor_test>"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+            "${WINDOWS_APP_SDK_WINUI_RUNTIME_DIR}"
+            "$<TARGET_FILE_DIR:decor_test>"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+            "${WINDOWS_APP_SDK_DWRITE_RUNTIME_DIR}"
+            "$<TARGET_FILE_DIR:decor_test>"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            "${WINDOWS_APP_SDK_BOOTSTRAP_DLL}"
-            "$<TARGET_FILE_DIR:decor_test>/Microsoft.WindowsAppRuntime.Bootstrap.dll"
-    COMMENT "Copying Windows App Runtime bootstrap DLL next to the executable"
+            "${WINDOWS_APP_SDK_VERSIONINFO_XML}"
+            "$<TARGET_FILE_DIR:decor_test>/WindowsAppSDK-VersionInfo.xml"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${WINDOWS_APP_SDK_VERSIONINFO_JSON}"
+            "$<TARGET_FILE_DIR:decor_test>/WindowsAppSDK-VersionInfo.json"
+    COMMENT "Copying Windows App SDK self-contained runtime files next to the executable"
     VERBATIM
 )
 
 install(TARGETS decor_test RUNTIME DESTINATION .)
+install(DIRECTORY "${WINDOWS_APP_SDK_FOUNDATION_RUNTIME_DIR}/" DESTINATION .)
+install(DIRECTORY "${WINDOWS_APP_SDK_INTERACTIVE_RUNTIME_DIR}/" DESTINATION .)
+install(DIRECTORY "${WINDOWS_APP_SDK_WINUI_RUNTIME_DIR}/" DESTINATION .)
+install(DIRECTORY "${WINDOWS_APP_SDK_DWRITE_RUNTIME_DIR}/" DESTINATION .)
+install(FILES "${WINDOWS_APP_SDK_VERSIONINFO_XML}" DESTINATION .)
+install(FILES "${WINDOWS_APP_SDK_VERSIONINFO_JSON}" DESTINATION .)
 
-if(EXISTS "${WINDOWS_APP_SDK_BOOTSTRAP_DLL}")
-    install(FILES "${WINDOWS_APP_SDK_BOOTSTRAP_DLL}" DESTINATION .)
-endif()
+# Ensure MSBuild/Visual Studio builds generated under the build directory
+# pick up self-contained Windows App SDK settings.
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/Directory.Build.props"
+    "${CMAKE_BINARY_DIR}/Directory.Build.props"
+    COPYONLY)
