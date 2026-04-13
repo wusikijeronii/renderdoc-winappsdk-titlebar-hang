@@ -225,6 +225,19 @@ int main()
         PrintHResultMessage(ensureHr);
         return 1;
     }
+    try
+    {
+        auto factory = winrt::get_activation_factory<winrt::Microsoft::UI::Windowing::AppWindow,
+                                                     winrt::Windows::Foundation::IActivationFactory>();
+
+        printf("AppWindow activation factory OK\n");
+    }
+    catch (const winrt::hresult_error &e)
+    {
+        printf("AppWindow factory failed: 0x%08lx\n", static_cast<unsigned long>(e.code().value));
+        auto msg = winrt::to_string(e.message());
+        if (!msg.empty()) printf("Message: %s\n", msg.c_str());
+    }
 
     const wchar_t kClassName[] = L"WinRTWindowTitleBar";
 

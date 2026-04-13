@@ -197,7 +197,14 @@ target_link_libraries(decor_test PRIVATE
     Microsoft.WindowsAppRuntime)
 
 target_compile_definitions(decor_test PRIVATE
-    MICROSOFT_WINDOWSAPPSDK_AUTOINITIALIZE_UNDOCKEDREGFREEWINRT)
+    MICROSOFT_WINDOWSAPPSDK_AUTOINITIALIZE_UNDOCKEDREGFREEWINRT
+    MICROSOFT_WINDOWSAPPSDK_SELFCONTAINED=1)
+
+if(MSVC)
+    target_link_options(decor_test PRIVATE
+        "/MANIFEST:EMBED"
+        "/MANIFESTINPUT:${WINDOWS_APP_SDK_SELF_CONTAINED_MANIFEST}")
+endif()
 
 add_custom_command(
     TARGET decor_test POST_BUILD
@@ -219,9 +226,6 @@ add_custom_command(
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
             "${WINDOWS_APP_SDK_VERSIONINFO_JSON}"
             "$<TARGET_FILE_DIR:decor_test>/WindowsAppSDK-VersionInfo.json"
-    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            "${WINDOWS_APP_SDK_SELF_CONTAINED_MANIFEST}"
-            "$<TARGET_FILE_DIR:decor_test>/$<TARGET_FILE_NAME:decor_test>.manifest"
     COMMENT "Copying Windows App SDK self-contained runtime files next to the executable"
     VERBATIM
 )
