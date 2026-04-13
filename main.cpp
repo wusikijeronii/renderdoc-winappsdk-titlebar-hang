@@ -15,6 +15,7 @@ using namespace winrt::Microsoft::UI::Windowing;
 using namespace winrt::Windows::Graphics;
 
 static constexpr int kLogicalTitleBarHeight = 40;
+static constexpr UINT kMsgInitTitleBar = WM_APP + 1;
 
 struct AppState
 {
@@ -80,14 +81,26 @@ static bool InitAppWindowTitleBar(HWND hwnd)
 {
     try
     {
-        if (!AppWindowTitleBar::IsCustomizationSupported()) { return false; }
+        if (!AppWindowTitleBar::IsCustomizationSupported())
+        {
+            printf("AppWindowTitleBar::IsCustomizationSupported() == false\n");
+            return false;
+        }
 
         auto id = winrt::Microsoft::UI::GetWindowIdFromWindow(hwnd);
         g_state.appWindow = AppWindow::GetFromWindowId(id);
-        if (!g_state.appWindow) return false;
+        if (!g_state.appWindow)
+        {
+            printf("AppWindow::GetFromWindowId returned null\n");
+            return false;
+        }
 
         g_state.titleBar = g_state.appWindow.TitleBar();
-        if (!g_state.titleBar) return false;
+        if (!g_state.titleBar)
+        {
+            printf("AppWindow::TitleBar returned null\n");
+            return false;
+        }
 
         printf("ExtendsContentIntoTitleBar\n");
         g_state.titleBar.ExtendsContentIntoTitleBar(true);
@@ -104,8 +117,16 @@ static bool InitAppWindowTitleBar(HWND hwnd)
 
         return true;
     }
+    catch (const winrt::hresult_error &e)
+    {
+        printf("InitAppWindowTitleBar hresult_error: 0x%08lx\n", static_cast<unsigned long>(e.code().value));
+        auto msg = winrt::to_string(e.message());
+        if (!msg.empty()) { printf("Message: %s\n", msg.c_str()); }
+        return false;
+    }
     catch (...)
     {
+        printf("InitAppWindowTitleBar unknown exception\n");
         return false;
     }
 }
@@ -134,8 +155,19 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
     switch (msg)
     {
         case WM_CREATE:
-            if (!InitAppWindowTitleBar(hwnd)) { return -1; }
-            UpdateTitleBarMetrics(hwnd);
+            PostMessageW(hwnd, kMsgInitTitleBar, 0, 0);
+            return 0;
+
+        case kMsgInitTitleBar:
+            if (InitAppWindowTitleBar(hwnd))
+            {
+                UpdateTitleBarMetrics(hwnd);
+                InvalidateRect(hwnd, nullptr, FALSE);
+            }
+            else
+            {
+                MessageBoxW(hwnd, L"InitAppWindowTitleBar failed", L"Warning", MB_ICONWARNING);
+            }
             return 0;
 
         case WM_ACTIVATE:
