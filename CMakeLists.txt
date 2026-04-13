@@ -143,18 +143,13 @@ set(WINDOWS_APP_SDK_BOOTSTRAP_DLL_OUTPUT
     "${CMAKE_CURRENT_BINARY_DIR}/Microsoft.WindowsAppRuntime.Bootstrap.dll")
 
 add_custom_command(
-    OUTPUT "${WINDOWS_APP_SDK_BOOTSTRAP_DLL_OUTPUT}"
+    TARGET decor_test POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "${WINDOWS_APP_SDK_BOOTSTRAP_DLL}"
-        "${WINDOWS_APP_SDK_BOOTSTRAP_DLL_OUTPUT}"
-    DEPENDS
-        decor_test
-        "${WINDOWS_APP_SDK_BOOTSTRAP_DLL}"
+            "${WINDOWS_APP_SDK_BOOTSTRAP_DLL}"
+            "$<TARGET_FILE_DIR:decor_test>/Microsoft.WindowsAppRuntime.Bootstrap.dll"
     COMMENT "Copying Windows App Runtime bootstrap DLL next to the executable"
-    VERBATIM)
-
-add_custom_target(copy_windows_app_sdk_bootstrap_dll ALL
-    DEPENDS "${WINDOWS_APP_SDK_BOOTSTRAP_DLL_OUTPUT}")
+    VERBATIM
+)
 
 install(TARGETS decor_test RUNTIME DESTINATION .)
 
